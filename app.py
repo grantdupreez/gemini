@@ -45,91 +45,70 @@ if not check_password():
     st.stop()
 
 
-# Set up Google Gemini-Pro AI model
-gen_api_key=st.secrets['auth_key']
-genai.configure(api_key=gen_api_key)
+st.title("Chat Your PDFs")  # Updated title
 
-# load gemini-pro model
-def gemini_pro():
-    model = genai.GenerativeModel('gemini-pro')
-    return model
+# Retrieve API key from environment variable
+google_api_key = st.secrets['auth_key']
 
-# Load gemini vision model
-def gemini_vision():
-    model = genai.GenerativeModel('gemini-pro-vision')
-    return model
+# Check if the API key is available
+if google_api_key is None:
+    st.warning("API key not found. Please set the google_api_key environment variable.")
+    st.stop()
 
-# get response from gemini pro vision model
-def gemini_visoin_response(model, prompt, image):
-    response = model.generate_content([prompt, image])
-    return response.text
+# File Upload with user-defined name
+uploaded_file = st.file_uploader("Upload a PDF file", type=["pdf"])
 
-# Set page title and icon
+if uploaded_file is not None:
+    st.text("PDF File Uploaded Successfully!")
 
-st.set_page_config(
-    page_title="Chat With Gemi",
-    page_icon="🧠",
-    layout="centered",
-    initial_sidebar_state="expanded"
-)
+    # PDF Processing (using PyPDF2 directly)
+    pdf_data = uploaded_file.read()
+    pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_data))
+    pdf_pages = pdf_reader.pages
 
-with st.sidebar:
-    user_picked = option_menu(
-        "Google Gemini AI",
-        ["ChatBot", "Image Captioning"],
-        menu_icon="robot",
-        icons = ["chat-dots-fill", "image-fill"],
-        default_index=0
-    )
+    # Create Context
+    context = "\n\n".join(page.extract_text() for page in pdf_pages)
 
-def roleForStreamlit(user_role):
-    if user_role == 'model':
-        return 'assistant'
-    else:
-        return user_role
-    
+    # Split Texts
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=10000, chunk_overlap=200)
+    texts = text_splitter.split_text(context)
 
-if user_picked == 'ChatBot':
-    model = gemini_pro()
-    
-    if "chat_history" not in st.session_state:
-        st.session_state['chat_history'] = model.start_chat(history=[])
+    # Chroma Embeddings
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+    vector_index = Chroma.from_texts(texts, embeddings).as_retriever()
 
-    st.title("🤖TalkBot")
+    # Get User Question
+    user_question = st.text_input("Ask a Question:")
 
-    #Display the chat history
-    for message in st.session_state.chat_history.history:
-        with st.chat_message(roleForStreamlit(message.role)):    
-            st.markdown(message.parts[0].text)
+    if st.button("Get Answer"):
+        if user_question:
+            # Get Relevant Documents
+            docs = vector_index.get_relevant_documents(user_question)
 
-    # Get user input
-    user_input = st.chat_input("Message TalkBot:")
-    if user_input:
-        st.chat_message("user").markdown(user_input)
-        reponse = st.session_state.chat_history.send_message(user_input)
-        with st.chat_message("assistant"):
-            st.markdown(reponse.text)
+            # Define Prompt Template
+            prompt_template = """
+            Answer the question as detailed as possible from the provided context,
+            make sure to provide all the details, if the answer is not in
+            provided context just say, "answer is not available in the context",
+            don't provide the wrong answer\n\n
+            Context:\n {context}?\n
+            Question: \n{question}\n
+            Answer:
+            """
 
-genai.configure(api_key=gen_api_key)
+            # Create Prompt
+            prompt = PromptTemplate(template=prompt_template, input_variables=['context', 'question'])
 
-if user_picked == 'Image Captioning':
-    model = gemini_vision()
+            # Load QA Chain
+            model = ChatGoogleGenerativeAI(model="gemini-pro", temperature=0.3, api_key=google_api_key)
+            chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
 
-    st.title("🖼️Image Captioning")
+            # Get Response
+            response = chain({"input_documents": docs, "question": user_question}, return_only_outputs=True)
 
-    image = st.file_uploader("Upload an image", type=["jpg", "png", "jpeg"])
+            # Display Answer
+            st.subheader("Answer:")
+            st.write(response['output_text'])
 
-    user_prompt = st.text_input("Enter the prompt for image captioning:")
-
-    if st.button("Generate Caption"):
-        load_image = Image.open(image)
-
-        colLeft, colRight = st.columns(2)
-
-        with colLeft:
-            st.image(load_image.resize((800, 500)))
-
-        caption_response = gemini_visoin_response(model, user_prompt, load_image)
-
-        with colRight:
-            st.info(caption_response)
+        else:
+            st.warning("Please enter a question.")
