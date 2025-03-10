@@ -97,7 +97,7 @@ if user_picked == 'ChatBot':
     if "chat_history" not in st.session_state:
         st.session_state['chat_history'] = model.start_chat(history=[])
 
-    st.title("🤖Gemini powered assistant")
+    st.title("🧠Gemini powered assistant")
 
     #Display the chat history
     for message in st.session_state.chat_history.history:
@@ -105,7 +105,7 @@ if user_picked == 'ChatBot':
             st.markdown(message.parts[0].text)
 
     # Get user input
-    user_input = st.chat_input("Message TalkBot:")
+    user_input = st.chat_input("How can I help you?")
     if user_input:
         st.chat_message("user").markdown(user_input)
         reponse = st.session_state.chat_history.send_message(user_input)
@@ -116,7 +116,7 @@ if user_picked == 'ChatBot':
 if user_picked == 'Image Captioning':
     model = gemini_vision()
 
-    st.title("🖼️Image Captioning")
+    st.title("🖼Image Captioning")
 
     image = st.file_uploader("Upload an image", type=["jpg", "png", "jpeg"])
 
