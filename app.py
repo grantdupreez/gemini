@@ -43,39 +43,89 @@ if not check_password():
 
 API_KEY = st.secrets['auth_key']
 
+# Set up Google Gemini-Pro AI model
+genai.configure(api_key=API_KEY)
+
+# load gemini-pro model
+def gemini_mod():
+    model = genai.GenerativeModel('Gemini 2.0 Flash')
+    return model
+
+# Load gemini vision model
+def gemini_vision():
+    model = genai.GenerativeModel('gemini-pro-vision')
+    return model
+
+# get response from gemini pro vision model
+def gemini_visoin_response(model, prompt, image):
+    response = model.generate_content([prompt, image])
+    return response.text
+
+# Set page title and icon
+
 st.set_page_config(
-    page_title="Chat with Gemini!",
-    page_icon=":robot_face:",  
-    layout="wide",  
+    page_title="Chat With Gem",
+    page_icon="🧠",
+    layout="centered",
+    initial_sidebar_state="expanded"
 )
 
-genai.configure(api_key=API_KEY)
-model = genai.GenerativeModel('gemini-2.0-flash-001')
+with st.sidebar:
+    user_picked = option_menu(
+        "Google Gemini AI",
+        ["ChatBot", "Image Captioning"],
+        menu_icon="robot",
+        icons = ["chat-dots-fill", "image-fill"],
+        default_index=0
+    )
 
-if "chat_session" not in st.session_state:
-    st.session_state.chat_session = model.start_chat(history=[])
-
-st.title("🤖 Chat with Gemini 2.0")
-
-# Display the chat history
-for msg in st.session_state.chat_session.history:
-    with st.chat_message(map_role(msg["role"])):
-        st.markdown(msg["content"])
-
-# Input field for user's message
-user_input = st.chat_input("Ask Gemini...")
-if user_input:
-    # Add user's message to chat and display it
-    st.chat_message("user").markdown(user_input)
-
-    # Send user's message to Gemini and get the response
-    gemini_response = fetch_gemini_response(user_input)
-
-    # Display Gemini's response
-    with st.chat_message("assistant"):
-        st.markdown(gemini_response)
-
-    # Add user and assistant messages to the chat history
-    st.session_state.chat_session.history.append({"role": "user", "content": user_input})
-    st.session_state.chat_session.history.append({"role": "model", "content": gemini_response})
+def roleForStreamlit(user_role):
+    if user_role == 'model':
+        return 'assistant'
+    else:
+        return user_role
     
+
+if user_picked == 'ChatBot':
+    model = gemini_mod()
+    
+    if "chat_history" not in st.session_state:
+        st.session_state['chat_history'] = model.start_chat(history=[])
+
+    st.title("🤖TalkBot")
+
+    #Display the chat history
+    for message in st.session_state.chat_history.history:
+        with st.chat_message(roleForStreamlit(message.role)):    
+            st.markdown(message.parts[0].text)
+
+    # Get user input
+    user_input = st.chat_input("Message TalkBot:")
+    if user_input:
+        st.chat_message("user").markdown(user_input)
+        reponse = st.session_state.chat_history.send_message(user_input)
+        with st.chat_message("assistant"):
+            st.markdown(reponse.text)
+
+
+if user_picked == 'Image Captioning':
+    model = gemini_vision()
+
+    st.title("🖼️Image Captioning")
+
+    image = st.file_uploader("Upload an image", type=["jpg", "png", "jpeg"])
+
+    user_prompt = st.text_input("Enter the prompt for image captioning:")
+
+    if st.button("Generate Caption"):
+        load_image = Image.open(image)
+
+        colLeft, colRight = st.columns(2)
+
+        with colLeft:
+            st.image(load_image.resize((800, 500)))
+
+        caption_response = gemini_visoin_response(model, user_prompt, load_image)
+
+        with colRight:
+            st.info(caption_response)
