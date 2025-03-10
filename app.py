@@ -97,7 +97,7 @@ if user_picked == 'ChatBot':
     if "chat_history" not in st.session_state:
         st.session_state['chat_history'] = model.start_chat(history=[])
 
-    st.title("🤖TalkBot")
+    st.title("🤖Gemini powered assistant")
 
     #Display the chat history
     for message in st.session_state.chat_history.history:
