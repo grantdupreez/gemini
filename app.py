@@ -99,7 +99,7 @@ def main():
         
                 st.session_state.message += prompt
                 with st.chat_message(
-                    "model", avatar="🧞‍♀️",
+                    "model", avatar="🤖",
                 ):
                     response = chat.send_message(st.session_state.message)
                     st.markdown(response.text) 
@@ -151,7 +151,7 @@ def main():
             
                     st.session_state.message += prompt2b
                     with st.chat_message(
-                        "model", avatar="🧞‍♀️",
+                        "model", avatar="🤖",
                     ):
                         response2b = chat2b.send_message(st.session_state.message)
                         st.markdown(response2b.text)
@@ -193,7 +193,7 @@ def main():
             
                     st.session_state.message += prompt3
                     with st.chat_message(
-                        "model", avatar="🧞‍♀️",
+                        "model", avatar="🤖",
                     ):
                         response3 = chat3.send_message(st.session_state.message)
                         st.markdown(response3.text)
@@ -234,7 +234,7 @@ def main():
             
                     st.session_state.message += prompt5
                     with st.chat_message(
-                        "model", avatar="🧞‍♀️",
+                        "model", avatar="🤖",
                     ):
                         response4 = chat4.send_message(st.session_state.message)
                         st.markdown(response4.text)
@@ -283,7 +283,7 @@ def main():
             
                     st.session_state.message += prompt4
                     with st.chat_message(
-                        "model", avatar="🧞‍♀️",
+                        "model", avatar="🤖",
                     ):
                         response5 = chat5.send_message(st.session_state.message)
                         st.markdown(response5.text)
