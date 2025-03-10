@@ -41,8 +41,6 @@ def check_password():
 if not check_password():
     st.stop()
 
-===========
-
 API_KEY = st.secrets['auth_key']
 
 st.set_page_config(
