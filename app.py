@@ -100,7 +100,7 @@ except:
     st.session_state.messages = []
     st.session_state.gemini_history = []
     print('new_cache made')
-st.session_state.model = genai.GenerativeModel('gemini-pro')
+st.session_state.model = genai.GenerativeModel('gemini-2.0-flash-001')
 st.session_state.chat = st.session_state.model.start_chat(
     history=st.session_state.gemini_history,
 )
