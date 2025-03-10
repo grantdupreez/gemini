@@ -4,6 +4,8 @@ import streamlit as st, os, time
 from google import genai
 from google.genai import types
 from pypdf import PdfReader, PdfWriter, PdfMerger
+import hmac
+
 
 def check_password():
     """Returns `True` if the user had a correct password."""
