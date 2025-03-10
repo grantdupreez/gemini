@@ -46,7 +46,7 @@ if not check_password():
 
 
 # Set up Google Gemini-Pro AI model
-genai.configure(api_key=GOOGLE_API_KEY)
+genai.configure(api_key=st.secrets['auth_key'])
 
 # load gemini-pro model
 def gemini_pro():
@@ -109,7 +109,7 @@ if user_picked == 'ChatBot':
         with st.chat_message("assistant"):
             st.markdown(reponse.text)
 
-genai.configure(api_key=st.secrets['auth_key']
+genai.configure(api_key=st.secrets['auth_key'])
 
 if user_picked == 'Image Captioning':
     model = gemini_vision()
