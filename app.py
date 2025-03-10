@@ -44,18 +44,18 @@ if not check_password():
 API_KEY = st.secrets['auth_key']
 
 st.set_page_config(
-    page_title="Chat with Gemini-Pro!",
+    page_title="Chat with Gemini!",
     page_icon=":robot_face:",  
     layout="wide",  
 )
 
 gpt.configure(api_key=API_KEY)
-model = gpt.GenerativeModel('gemini-pro')
+model = gpt.GenerativeModel('gemini-2.0-flash-001')
 
 if "chat_session" not in st.session_state:
     st.session_state.chat_session = model.start_chat(history=[])
 
-st.title("🤖 Chat with Gemini-Pro")
+st.title("🤖 Chat with Gemini 2.0")
 
 # Display the chat history
 for msg in st.session_state.chat_session.history:
@@ -63,7 +63,7 @@ for msg in st.session_state.chat_session.history:
         st.markdown(msg["content"])
 
 # Input field for user's message
-user_input = st.chat_input("Ask Gemini-Pro...")
+user_input = st.chat_input("Ask Gemini...")
 if user_input:
     # Add user's message to chat and display it
     st.chat_message("user").markdown(user_input)
