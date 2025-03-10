@@ -49,7 +49,7 @@ genai.configure(api_key=API_KEY)
 
 # load gemini-pro model
 def gemini_mod():
-    model = genai.GenerativeModel('Gemini 2.0 Flash')
+    model = genai.GenerativeModel('Gemini 2.0 Flash-Lite')
     return model
 
 # Load gemini vision model
