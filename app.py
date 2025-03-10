@@ -1,15 +1,14 @@
 import streamlit as st
+from langchain.prompts import PromptTemplate
+from langchain.chains.question_answering import load_qa_chain
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.vectorstores import Chroma
+from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
+from langchain_community.vectorstores import FAISS
 import PyPDF2
 import os
 import io
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-import os
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
 import google.generativeai as genai
-from langchain_community.vectorstores import FAISS
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain.chains.question_answering import load_qa_chain
-from langchain.prompts import PromptTemplate
 import hmac
 
 
