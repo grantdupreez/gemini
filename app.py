@@ -49,8 +49,8 @@ st.set_page_config(
     layout="wide",  
 )
 
-gpt.configure(api_key=API_KEY)
-model = gpt.GenerativeModel('gemini-2.0-flash-001')
+genai.configure(api_key=API_KEY)
+model = genai.GenerativeModel('gemini-2.0-flash-001')
 
 if "chat_session" not in st.session_state:
     st.session_state.chat_session = model.start_chat(history=[])
