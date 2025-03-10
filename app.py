@@ -1,9 +1,9 @@
-import streamlit as st, os, time
-from google import genai
-from google.genai import types
-from pypdf import PdfReader, PdfWriter, PdfMerger
+import time
+import os
+import joblib
+import streamlit as st
+import google.generativeai as genai
 import hmac
-
 
 def check_password():
     """Returns `True` if the user had a correct password."""
@@ -42,257 +42,133 @@ def check_password():
 if not check_password():
     st.stop()
 
+API_KEY=os.environ.get('auth_key')
+genai.configure(api_key=API_KEY)
 
+new_chat_id = f'{time.time()}'
+MODEL_ROLE = 'ai'
+AI_AVATAR_ICON = '✨'
 
-def setup_page():
-    st.set_page_config(
-        page_title="Talk to Gemini",
-        layout="centered"
+# Create a data/ folder if it doesn't already exist
+try:
+    os.mkdir('data/')
+except:
+    # data/ folder already exists
+    pass
+
+# Load past chats (if available)
+try:
+    past_chats: dict = joblib.load('data/past_chats_list')
+except:
+    past_chats = {}
+
+# Sidebar allows a list of past chats
+with st.sidebar:
+    st.write('# Past Chats')
+    if st.session_state.get('chat_id') is None:
+        st.session_state.chat_id = st.selectbox(
+            label='Pick a past chat',
+            options=[new_chat_id] + list(past_chats.keys()),
+            format_func=lambda x: past_chats.get(x, 'New Chat'),
+            placeholder='_',
+        )
+    else:
+        # This will happen the first time AI response comes in
+        st.session_state.chat_id = st.selectbox(
+            label='Pick a past chat',
+            options=[new_chat_id, st.session_state.chat_id] + list(past_chats.keys()),
+            index=1,
+            format_func=lambda x: past_chats.get(x, 'New Chat' if x != st.session_state.chat_id else st.session_state.chat_title),
+            placeholder='_',
+        )
+    # Save new chats after a message has been sent to AI
+    # TODO: Give user a chance to name chat
+    st.session_state.chat_title = f'ChatSession-{st.session_state.chat_id}'
+
+st.write('# Chat with Gemini')
+
+# Chat history (allows to ask multiple questions)
+try:
+    st.session_state.messages = joblib.load(
+        f'data/{st.session_state.chat_id}-st_messages'
     )
-    
-    st.header("Chatbot using Gemini 2.0 Flash!" )
+    st.session_state.gemini_history = joblib.load(
+        f'data/{st.session_state.chat_id}-gemini_messages'
+    )
+    print('old cache')
+except:
+    st.session_state.messages = []
+    st.session_state.gemini_history = []
+    print('new_cache made')
+st.session_state.model = genai.GenerativeModel('gemini-pro')
+st.session_state.chat = st.session_state.model.start_chat(
+    history=st.session_state.gemini_history,
+)
 
-    st.sidebar.header("Options", divider='rainbow')
-    
-    hide_menu_style = """
-            <style>
-            #MainMenu {visibility: hidden;}
-            </style>
-            """
-    st.markdown(hide_menu_style, unsafe_allow_html=True)
+# Display chat messages from history on app rerun
+for message in st.session_state.messages:
+    with st.chat_message(
+        name=message['role'],
+        avatar=message.get('avatar'),
+    ):
+        st.markdown(message['content'])
 
-    
-def get_choice():
-    choice = st.sidebar.radio("Choose:", ["Converse with Gemini 2.0",
-                                          "Chat with PDFs",
-                                          "Chat with an image",
-                                          "Chat with audio",
-                                          "Chat with video"],)
-    return choice
+# React to user input
+if prompt := st.chat_input('Your message here...'):
+    # Save this as a chat for later
+    if st.session_state.chat_id not in past_chats.keys():
+        past_chats[st.session_state.chat_id] = st.session_state.chat_title
+        joblib.dump(past_chats, 'data/past_chats_list')
+    # Display user message in chat message container
+    with st.chat_message('user'):
+        st.markdown(prompt)
+    # Add user message to chat history
+    st.session_state.messages.append(
+        dict(
+            role='user',
+            content=prompt,
+        )
+    )
+    ## Send message to AI
+    response = st.session_state.chat.send_message(
+        prompt,
+        stream=True,
+    )
+    # Display assistant response in chat message container
+    with st.chat_message(
+        name=MODEL_ROLE,
+        avatar=AI_AVATAR_ICON,
+    ):
+        message_placeholder = st.empty()
+        full_response = ''
+        assistant_response = response
+        # Streams in a chunk at a time
+        for chunk in response:
+            # Simulate stream of chunk
+            # TODO: Chunk missing `text` if API stops mid-stream ("safety"?)
+            for ch in chunk.text.split(' '):
+                full_response += ch + ' '
+                time.sleep(0.05)
+                # Rewrites with a cursor at end
+                message_placeholder.write(full_response + '▌')
+        # Write full message with placeholder
+        message_placeholder.write(full_response)
 
- 
-def get_clear():
-    clear_button=st.sidebar.button("Start new session", key="clear")
-    return clear_button
-
-     
-def main():
-    choice = get_choice()
-    
-    if choice == "Converse with Gemini 2.0":
-        st.subheader("Ask Gemini")
-        clear = get_clear()
-        if clear:
-            if 'message' in st.session_state:
-                del st.session_state['message']
-    
-        if 'message' not in st.session_state:
-            st.session_state.message = " "
-        
-        if clear not in st.session_state:
-            chat = client.chats.create(model=MODEL_ID, config=types.GenerateContentConfig(
-                system_instruction="You are a helpful assistant. Your answers need to brief and concise.",))
-            prompt = st.chat_input("Enter your question here")
-            if prompt:
-                with st.chat_message("user"):
-                    st.write(prompt)
-        
-                st.session_state.message += prompt
-                with st.chat_message(
-                    "model", avatar="🤖",
-                ):
-                    response = chat.send_message(st.session_state.message)
-                    st.markdown(response.text) 
-                    st.sidebar.markdown(response.usage_metadata)
-                st.session_state.message += response.text
-
-                        
-    elif choice == "Chat with PDFs":
-        st.subheader("Chat with your PDF files")
-        clear = get_clear()
-        if clear:
-            if 'message' in st.session_state:
-                del st.session_state['message']
-    
-        if 'message' not in st.session_state:
-            st.session_state.message = " "
-        
-        if clear not in st.session_state:
-        
-            uploaded_files2 = st.file_uploader("Choose 1 or more files",  type=['pdf'], accept_multiple_files=True)
-               
-            if uploaded_files2:
-                merger = PdfWriter()
-                for file in uploaded_files2:
-                        merger.append(file)
-    
-                fullfile = "merged_all_files.pdf"
-                merger.write(fullfile)
-                merger.close()
-
-                file_upload = client.files.upload(file=fullfile) 
-                chat2b = client.chats.create(model=MODEL_ID,
-                    history=[
-                        types.Content(
-                            role="user",
-                            parts=[
-    
-                                    types.Part.from_uri(
-                                        file_uri=file_upload.uri,
-                                        mime_type=file_upload.mime_type),
-                                    ]
-                            ),
-                        ]
-                        )
-                prompt2b = st.chat_input("Enter your question here")
-                if prompt2b:
-                    with st.chat_message("user"):
-                        st.write(prompt2b)
-            
-                    st.session_state.message += prompt2b
-                    with st.chat_message(
-                        "model", avatar="🤖",
-                    ):
-                        response2b = chat2b.send_message(st.session_state.message)
-                        st.markdown(response2b.text)
-                        st.sidebar.markdown(response2b.usage_metadata)
-                    st.session_state.message += response2b.text
-            
-    elif choice == "Chat with an image":
-        st.subheader("Chat with your image file")
-        clear = get_clear()
-        if clear:
-            if 'message' in st.session_state:
-                del st.session_state['message']
-    
-        if 'message' not in st.session_state:
-            st.session_state.message = " "
-        
-        if clear not in st.session_state:
-            uploaded_files2 = st.file_uploader("Choose your PNG or JPEG file",  type=['png','jpg'], accept_multiple_files=False)
-            if uploaded_files2:
-                file_name2=uploaded_files2.name
-                file_upload = client.files.upload(file=file_name2)
-                chat3 = client.chats.create(model=MODEL_ID,
-                    history=[
-                        types.Content(
-                            role="user",
-                            parts=[
-    
-                                    types.Part.from_uri(
-                                        file_uri=file_upload.uri,
-                                        mime_type=file_upload.mime_type),
-                                    ]
-                            ),
-                        ]
-                        )
-                prompt3 = st.chat_input("Enter your question here")
-                if prompt3:
-                    with st.chat_message("user"):
-                        st.write(prompt3)
-            
-                    st.session_state.message += prompt3
-                    with st.chat_message(
-                        "model", avatar="🤖",
-                    ):
-                        response3 = chat3.send_message(st.session_state.message)
-                        st.markdown(response3.text)
-                    st.session_state.message += response3.text
-                
-    elif choice == "Chat with audio":
-        st.subheader("Chat with your audio file")
-        clear = get_clear()
-        if clear:
-            if 'message' in st.session_state:
-                del st.session_state['message']
-    
-        if 'message' not in st.session_state:
-            st.session_state.message = " "
-        
-        if clear not in st.session_state:
-            uploaded_files3 = st.file_uploader("Choose your mp3 or wav file",  type=['mp3','wav'], accept_multiple_files=False)
-            if uploaded_files3:
-                file_name3=uploaded_files3.name
-                file_upload = client.files.upload(file=file_name3)
-                chat4 = client.chats.create(model=MODEL_ID,
-                    history=[
-                        types.Content(
-                            role="user",
-                            parts=[
-    
-                                    types.Part.from_uri(
-                                        file_uri=file_upload.uri,
-                                        mime_type=file_upload.mime_type),
-                                    ]
-                            ),
-                        ]
-                        )
-                prompt5 = st.chat_input("Enter your question here")
-                if prompt5:
-                    with st.chat_message("user"):
-                        st.write(prompt5)
-            
-                    st.session_state.message += prompt5
-                    with st.chat_message(
-                        "model", avatar="🤖",
-                    ):
-                        response4 = chat4.send_message(st.session_state.message)
-                        st.markdown(response4.text)
-                    st.session_state.message += response4.text
-
-    elif choice == "Chat with video":
-        st.subheader("Chat with your video file")
-        clear = get_clear()
-        if clear:
-            if 'message' in st.session_state:
-                del st.session_state['message']
-    
-        if 'message' not in st.session_state:
-            st.session_state.message = " "
-        
-        if clear not in st.session_state:
-            uploaded_files4 = st.file_uploader("Choose your mp4 or mov file",  type=['mp4','mov'], accept_multiple_files=False)
-            
-            if uploaded_files4:
-                file_name4=uploaded_files4.name
-                video_file = client.files.upload(file=file_name4)
-                while video_file.state == "PROCESSING":
-                    time.sleep(10)
-                    video_file = client.files.get(name=video_file.name)
-                
-                if video_file.state == "FAILED":
-                  raise ValueError(video_file.state)
-                
-                chat5 = client.chats.create(model=MODEL_ID,
-                    history=[
-                        types.Content(
-                            role="user",
-                            parts=[
-    
-                                    types.Part.from_uri(
-                                        file_uri=video_file.uri,
-                                        mime_type=video_file.mime_type),
-                                    ]
-                            ),
-                        ]
-                        )
-                prompt4 = st.chat_input("Enter your question here")
-                if prompt4:
-                    with st.chat_message("user"):
-                        st.write(prompt4)
-            
-                    st.session_state.message += prompt4
-                    with st.chat_message(
-                        "model", avatar="🤖",
-                    ):
-                        response5 = chat5.send_message(st.session_state.message)
-                        st.markdown(response5.text)
-                    st.session_state.message += response5.text
-                    
-                
-if __name__ == '__main__':
-    setup_page()
-    api_key = st.secrets['auth_key']
-    client = genai.Client(api_key=api_key)
-    MODEL_ID = "gemini-2.0-flash-001"
-    main()
+    # Add assistant response to chat history
+    st.session_state.messages.append(
+        dict(
+            role=MODEL_ROLE,
+            content=st.session_state.chat.history[-1].parts[0].text,
+            avatar=AI_AVATAR_ICON,
+        )
+    )
+    st.session_state.gemini_history = st.session_state.chat.history
+    # Save to file
+    joblib.dump(
+        st.session_state.messages,
+        f'data/{st.session_state.chat_id}-st_messages',
+    )
+    joblib.dump(
+        st.session_state.gemini_history,
+        f'data/{st.session_state.chat_id}-gemini_messages',
+    )
