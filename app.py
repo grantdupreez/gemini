@@ -69,8 +69,7 @@ def gemini_visoin_response(model, prompt, image):
 # Set page title and icon
 
 st.set_page_config(
-    page_title="Chat With Gem",
-    page_icon="🧠",
+    page_title="Let's have a chat...",
     layout="centered",
     initial_sidebar_state="expanded"
 )
@@ -97,7 +96,7 @@ if user_picked == 'ChatBot':
     if "chat_history" not in st.session_state:
         st.session_state['chat_history'] = model.start_chat(history=[])
 
-    st.title("🧠Gemini powered assistant")
+    st.title("Gemini powered assistant")
 
     #Display the chat history
     for message in st.session_state.chat_history.history:
