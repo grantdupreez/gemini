@@ -4,3 +4,4 @@ streamlit
 langchain-google-genai
 chromadb
 PyPDF2
+FAISS
