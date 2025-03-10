@@ -43,21 +43,25 @@ if not check_password():
     st.stop()
 
 API_KEY = st.secrets['auth_key']
+text_model = st.secrets['text_model']
+image_model = st.secrets['image_model']
 
-# Set up Google Gemini-Pro AI model
+
+
+# Set up Google Gemini AI model
 genai.configure(api_key=API_KEY)
 
-# load gemini-pro model
+# load gemini model
 def gemini_mod():
-    model = genai.GenerativeModel('gemini-2.0-flash-001')
+    model = genai.GenerativeModel(text_model)
     return model
 
-# Load gemini vision model
+# Load gemini visual model
 def gemini_vision():
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel(image_model)
     return model
 
-# get response from gemini pro vision model
+# get response from gemini image model
 def gemini_visoin_response(model, prompt, image):
     response = model.generate_content([prompt, image])
     return response.text
