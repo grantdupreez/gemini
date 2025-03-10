@@ -48,7 +48,7 @@ image_model = st.secrets['image_model']
 
 
 
-# Set up Google Gemini AI model
+# Set up Gemini AI model
 genai.configure(api_key=API_KEY)
 
 # load gemini model
@@ -77,7 +77,7 @@ st.set_page_config(
 
 with st.sidebar:
     user_picked = option_menu(
-        "Google Gemini AI",
+        "Gemini AI",
         ["ChatBot", "Image Captioning"],
         menu_icon="robot",
         icons = ["chat-dots-fill", "image-fill"],
