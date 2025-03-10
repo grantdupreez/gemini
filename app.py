@@ -1,8 +1,9 @@
-import os
 import streamlit as st
+import os
+from streamlit_option_menu import option_menu
+from PIL import Image
 import google.generativeai as genai
 import hmac
-from functions import*
 
 def check_password():
     """Returns `True` if the user had a correct password."""
