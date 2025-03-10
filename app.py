@@ -115,7 +115,7 @@ if user_picked == 'ChatBot':
 if user_picked == 'Image Captioning':
     model = gemini_vision()
 
-    st.title("🖼Image Captioning")
+    st.title("Image Captioning")
 
     image = st.file_uploader("Upload an image", type=["jpg", "png", "jpeg"])
 
