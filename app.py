@@ -66,9 +66,8 @@ uploaded_file = st.file_uploader("Upload a PDF file", type=["pdf"])
 if uploaded_file is not None:
     st.text("PDF File Uploaded Successfully!")
 
-    # PDF Processing (using PyPDF2 directly)
     pdf_data = uploaded_file.read()
-    pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_data))
+    pdf_reader = pypdf.PdfReader(io.BytesIO(pdf_data))
     pdf_pages = pdf_reader.pages
 
     # Create Context
