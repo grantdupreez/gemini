@@ -44,88 +44,91 @@ def check_password():
 if not check_password():
     st.stop()
 
-def get_pdf_text(pdf_docs):
-    text=""
-    for pdf in pdf_docs:
-        pdf_reader= PdfReader(pdf)
-        for page in pdf_reader.pages:
-            text+= page.extract_text()
-    return  text
 
+# Set up Google Gemini-Pro AI model
+genai.configure(api_key=GOOGLE_API_KEY)
 
+# load gemini-pro model
+def gemini_pro():
+    model = genai.GenerativeModel('gemini-pro')
+    return model
 
-def get_text_chunks(text):
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=10000, chunk_overlap=1000)
-    chunks = text_splitter.split_text(text)
-    return chunks
+# Load gemini vision model
+def gemini_vision():
+    model = genai.GenerativeModel('gemini-pro-vision')
+    return model
 
+# get response from gemini pro vision model
+def gemini_visoin_response(model, prompt, image):
+    response = model.generate_content([prompt, image])
+    return response.text
 
-def get_vector_store(text_chunks):
-    embeddings = GoogleGenerativeAIEmbeddings(model = "models/embedding-001")
-    vector_store = FAISS.from_texts(text_chunks, embedding=embeddings)
-    vector_store.save_local("faiss_index")
+# Set page title and icon
 
+st.set_page_config(
+    page_title="Chat With Gemi",
+    page_icon="🧠",
+    layout="centered",
+    initial_sidebar_state="expanded"
+)
 
-def get_conversational_chain():
+with st.sidebar:
+    user_picked = option_menu(
+        "Google Gemini AI",
+        ["ChatBot", "Image Captioning"],
+        menu_icon="robot",
+        icons = ["chat-dots-fill", "image-fill"],
+        default_index=0
+    )
 
-    prompt_template = """
+def roleForStreamlit(user_role):
+    if user_role == 'model':
+        return 'assistant'
+    else:
+        return user_role
     
-    Context:\n {context}?\n
-    Question: \n{question}\n
 
-    Answer:
-    """
-
-    model = ChatGoogleGenerativeAI(model="gemini-pro",
-                             temperature=0.3)
-
-    prompt = PromptTemplate(template = prompt_template, input_variables = ["context", "question"])
-    chain = load_qa_chain(model, chain_type="stuff", prompt=prompt)
-
-    return chain
-
-
-
-def user_input(user_question):
-    embeddings = GoogleGenerativeAIEmbeddings(model = "models/embedding-001")
+if user_picked == 'ChatBot':
+    model = gemini_pro()
     
-    new_db = FAISS.load_local("faiss_index", embeddings, allow_dangerous_deserialization=True)
+    if "chat_history" not in st.session_state:
+        st.session_state['chat_history'] = model.start_chat(history=[])
 
-    docs = new_db.similarity_search(user_question)
+    st.title("🤖TalkBot")
 
-    chain = get_conversational_chain()
+    #Display the chat history
+    for message in st.session_state.chat_history.history:
+        with st.chat_message(roleForStreamlit(message.role)):    
+            st.markdown(message.parts[0].text)
 
-    
-    response = chain(
-        {"input_documents":docs, "question": user_question}
-        , return_only_outputs=True)
+    # Get user input
+    user_input = st.chat_input("Message TalkBot:")
+    if user_input:
+        st.chat_message("user").markdown(user_input)
+        reponse = st.session_state.chat_history.send_message(user_input)
+        with st.chat_message("assistant"):
+            st.markdown(reponse.text)
 
-    print(response)
-    st.write("Reply: ", response["output_text"])
+genai.configure(api_key=st.secrets['auth_key']
 
+if user_picked == 'Image Captioning':
+    model = gemini_vision()
 
+    st.title("🖼️Image Captioning")
 
+    image = st.file_uploader("Upload an image", type=["jpg", "png", "jpeg"])
 
-def main():
-    st.set_page_config("Chat PDF")
-    st.header("Chat with PDF using Gemini💁")
+    user_prompt = st.text_input("Enter the prompt for image captioning:")
 
-    user_question = st.text_input("Ask a Question from the PDF Files")
+    if st.button("Generate Caption"):
+        load_image = Image.open(image)
 
-    if user_question:
-        user_input(user_question)
+        colLeft, colRight = st.columns(2)
 
-    with st.sidebar:
-        st.title("Menu:")
-        pdf_docs = st.file_uploader("Upload your PDF Files and Click on the Submit & Process Button", accept_multiple_files=True)
-        if st.button("Submit & Process"):
-            with st.spinner("Processing..."):
-                raw_text = get_pdf_text(pdf_docs)
-                text_chunks = get_text_chunks(raw_text)
-                get_vector_store(text_chunks)
-                st.success("Done")
+        with colLeft:
+            st.image(load_image.resize((800, 500)))
 
+        caption_response = gemini_visoin_response(model, user_prompt, load_image)
 
-
-if __name__ == "__main__":
-    main()
+        with colRight:
+            st.info(caption_response)
