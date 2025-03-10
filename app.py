@@ -1,6 +1,7 @@
 import streamlit as st
-import pypdf
-from pypdf import PdfReader
+import PyPDF2
+import os
+import io
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import os
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
@@ -67,7 +68,7 @@ if uploaded_file is not None:
     st.text("PDF File Uploaded Successfully!")
 
     pdf_data = uploaded_file.read()
-    pdf_reader = pypdf.PdfReader(io.BytesIO(pdf_data))
+    pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_data))
     pdf_pages = pdf_reader.pages
 
     # Create Context
