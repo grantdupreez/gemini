@@ -335,7 +335,7 @@ def main():
                 
 if __name__ == '__main__':
     setup_page()
-    api_key = st.secrets['GOOGLE_API_KEY']
+    api_key = st.secrets['auth_key']
     client = genai.Client(api_key=api_key)
     MODEL_ID = "gemini-2.0-flash-001"
     main()
