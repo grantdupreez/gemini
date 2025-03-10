@@ -165,7 +165,7 @@ def main():
             uploaded_files2 = st.file_uploader("Choose 1 or more files",  type=['pdf'], accept_multiple_files=True)
                
             if uploaded_files2:
-                merger = PdfMerger()
+                merger = PdfWriter()
                 for file in uploaded_files2:
                         merger.append(file)
     
