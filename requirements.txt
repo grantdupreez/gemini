@@ -5,3 +5,4 @@ langchain
 chromadb
 faiss-cpu
 langchain_google_genai
+google-generativeai
