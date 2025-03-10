@@ -60,12 +60,18 @@ if google_api_key is None:
     st.warning("API key not found. Please set the google_api_key environment variable.")
     st.stop()
 
+# Check if the API key is available
+if google_api_key is None:
+    st.warning("API key not found. Please set the google_api_key environment variable.")
+    st.stop()
+
 # File Upload with user-defined name
 uploaded_file = st.file_uploader("Upload a PDF file", type=["pdf"])
 
 if uploaded_file is not None:
     st.text("PDF File Uploaded Successfully!")
 
+    # PDF Processing (using PyPDF2 directly)
     pdf_data = uploaded_file.read()
     pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_data))
     pdf_pages = pdf_reader.pages
